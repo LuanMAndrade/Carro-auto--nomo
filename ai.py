@@ -10,61 +10,56 @@ import torch.optim as optim
 import torch.autograd as autograd
 from torch.autograd import Variable
 import pdb
-
-# Criação da arquitetura da rede neural
+    
+        #Criação da arquitetura da rede neural
 class Network(nn.Module):
-    def __init__(self, input_size, nb_action):
+    def __init__ (self,input_size, nb_actions):
         super(Network, self).__init__()
         self.input_size = input_size
-        self.nb_action = nb_action
-        
-        # 5 -> 30 -> 3 - full connection (dense)
+        self.nb_actions = nb_actions
+
+        # 5 --> 30 --> 3  fc = Full Connection (Dense)
         self.fc1 = nn.Linear(input_size, 30)
-        self.fc2 = nn.Linear(30, nb_action)
-        
+        self.fc2 = nn.Linear(30, nb_actions)
+    
     def forward(self, state):
         x = F.relu(self.fc1(state))
-        q_values = self.fc2(x)
-        return q_values
+        q_vallues = self.fc2(x)
+        return q_vallues
     
-# Implementação do replay de experiência
-class ReplayMemory(object):
+class ReplayMemory():
     def __init__(self, capacity):
         self.capacity = capacity
         self.memory = []
-        
-    # D,E,F,G,H
-    # 4 valores: último estado, novo estado, última ação, última recompensa
+
     def push(self, event):
         self.memory.append(event)
         if len(self.memory) > self.capacity:
             del self.memory[0]
-            
+
     def sample(self, batch_size):
-        # ((1,2,3), (4,5,6)) -> ((1,4), (2,5), (3,6))
         samples = zip(*random.sample(self.memory, batch_size))
         return map(lambda x: Variable(torch.cat(x, 0)), samples)
-        
+    
 
-# Implementação de Deep Q-Learning
 class Dqn():
-    def __init__(self, input_size, nb_action, gamma):
+    def __init__(self, input_size, nb_actions, gamma):
         self.gamma = gamma
+        self.input_size = input_size
         self.reward_window = []
-        self.model = Network(input_size, nb_action)
+        self.model = Network(input_size, nb_actions)
         self.memory = ReplayMemory(100000)
         self.optimizer = optim.Adam(self.model.parameters(), lr = 0.001)
         self.last_state = torch.Tensor(input_size).unsqueeze(0)
         self.last_action = 0
         self.last_reward = 0
-        
+
     def select_action(self, state):
         with torch.no_grad():
-            logits = self.model(state)*0
+            logits = self.model(Variable(state, volatile = True))*7
             probs = F.softmax(logits)
             action = probs.multinomial(num_samples=1)
         return action.data[0, 0]
-
     
     def learn(self, batch_state, batch_next_state, batch_reward, batch_action):
         outputs = self.model(batch_state).gather(1, batch_action.unsqueeze(1)).squeeze(1)
@@ -106,13 +101,6 @@ class Dqn():
             print('Carregado com sucesso')
         else:
             print('Erro ao carregar')
-    
-    
-    
-    
-    
-    
-    
     
     
     
